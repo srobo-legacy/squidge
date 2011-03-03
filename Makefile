@@ -1,5 +1,5 @@
-CINCLUDES+=	`pkg-config --cflags gtk+-2.0`
-LIBS+=		`pkg-config --libs gtk+-2.0`
+CINCLUDES+=	`pkg-config --cflags gtk+-2.0 gdk-2.0`
+LIBS+=		`pkg-config --libs gtk+-2.0 gdk-2.0`
 
 all: squidge
 
