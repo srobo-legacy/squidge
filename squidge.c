@@ -62,6 +62,7 @@ read_inotify_fd(GIOChannel *src, GIOCondition cond, gpointer data)
 int
 main(int argc, char **argv)
 {
+	GtkScrolledWindow *scroll;
 
 	if (argc != 2) {
 		fprintf(stderr, "Usage: squidge logfile\n");
@@ -90,13 +91,24 @@ main(int argc, char **argv)
 	gtk_window_set_decorated(top_window, FALSE);
 	gtk_window_set_default_size(top_window, 480, 272);
 	gtk_container_set_border_width(GTK_CONTAINER(top_window), 0);
+	gtk_window_set_resizable(top_window, true);
+
+	scroll = GTK_SCROLLED_WINDOW(gtk_scrolled_window_new(NULL, NULL));
+	gtk_container_add(GTK_CONTAINER(top_window), GTK_WIDGET(scroll));
 
 	text_view = GTK_TEXT_VIEW(gtk_text_view_new());
 	gtk_text_view_set_editable(text_view, FALSE);
 	text_buffer = gtk_text_view_get_buffer(text_view);
 
-	gtk_container_add(GTK_CONTAINER(top_window), GTK_WIDGET(text_view));
+	gtk_container_add(GTK_CONTAINER(scroll), GTK_WIDGET(text_view));
+
 	gtk_widget_show_all(GTK_WIDGET(top_window));
+
+	GdkDisplay *display = gdk_display_get_default();
+	GdkScreen *scr = gdk_screen_get_default();
+	gdk_display_warp_pointer(display, scr, 1000, 1000);
+
+	gtk_window_set_focus(top_window, GTK_WIDGET(text_view));
 
 	gtk_main();
 
