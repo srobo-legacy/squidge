@@ -63,10 +63,19 @@ int
 main(int argc, char **argv)
 {
 
-	file_fd = open("/home/jmorse/afile", O_RDONLY, 0);
+	if (argc != 2) {
+		fprintf(stderr, "Usage: squidge logfile\n");
+		return 1;
+	}
+
+	file_fd = open(argv[1], O_RDONLY, 0);
+	if (file_fd < 0) {
+		perror("Couldn't open log file");
+		return 1;
+	}
 
 	inotify_fd = inotify_init();
-	inotify_add_watch(inotify_fd, "/home/jmorse/afile", IN_MODIFY);
+	inotify_add_watch(inotify_fd, argv[1], IN_MODIFY);
 
 	inotify_io = g_io_channel_unix_new(inotify_fd);
 	g_io_add_watch(inotify_io, G_IO_IN, read_inotify_fd, NULL);
