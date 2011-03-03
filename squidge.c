@@ -57,7 +57,23 @@ read_inotify_fd(GIOChannel *src, GIOCondition cond, gpointer data)
 
 	return TRUE;
 }
-	
+
+gboolean
+key_evt_handler(GtkWidget *wind, GdkEventKey *key, gpointer unused)
+{
+	GtkTextIter iter;
+
+	if (key->type == GDK_KEY_PRESS) {
+		if (key->keyval == GDK_Page_Up) {
+			gtk_text_buffer_get_end_iter(text_buffer, &iter);
+			gtk_text_view_scroll_to_iter(text_view, &iter, 0.0,
+							FALSE, 0, 0);
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
 
 int
 main(int argc, char **argv)
@@ -107,6 +123,11 @@ main(int argc, char **argv)
 	GdkDisplay *display = gdk_display_get_default();
 	GdkScreen *scr = gdk_screen_get_default();
 	gdk_display_warp_pointer(display, scr, 1000, 1000);
+
+	g_signal_connect_swapped(G_OBJECT(top_window), "destroy",
+			G_CALLBACK(gtk_main_quit), G_OBJECT(top_window));
+	g_signal_connect(G_OBJECT(top_window), "key-press-event",
+			key_evt_handler, NULL);
 
 	gtk_window_set_focus(top_window, GTK_WIDGET(text_view));
 
