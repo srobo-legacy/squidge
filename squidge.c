@@ -13,7 +13,9 @@ int file_fd, inotify_fd;
 GtkWindow *top_window;
 GtkTextView *text_view;
 GtkTextBuffer *text_buffer;
-GIOChannel *log_io, *inotify_io;
+GtkScrolledWindow *scroll;
+GtkLabel *start_robot;
+GIOChannel *log_io, *inotify_io, *stdin_io;
 bool log_io_active = false;
 
 gboolean
@@ -59,6 +61,25 @@ read_inotify_fd(GIOChannel *src, GIOCondition cond, gpointer data)
 }
 
 gboolean
+read_stdin(GIOChannel *src, GIOCondition cond, gpointer data)
+{
+	char buffer[1024];
+	int ret;
+
+	ret = read(0, &buffer[0], sizeof(buffer));
+	if (ret != 0) {
+		/* We've been fed some input (any input) from pyenv, indicating
+		 * that the user button has been pressed. Switch view. */
+		gtk_container_remove(GTK_CONTAINER(top_window), GTK_WIDGET(start_robot));
+		gtk_container_add(GTK_CONTAINER(top_window), GTK_WIDGET(scroll));
+		gtk_widget_show_all(GTK_WIDGET(top_window));
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+gboolean
 key_evt_handler(GtkWidget *wind, GdkEventKey *key, gpointer unused)
 {
 	GtkTextIter iter;
@@ -78,7 +99,6 @@ key_evt_handler(GtkWidget *wind, GdkEventKey *key, gpointer unused)
 int
 main(int argc, char **argv)
 {
-	GtkScrolledWindow *scroll;
 
 	if (argc != 2) {
 		fprintf(stderr, "Usage: squidge logfile\n");
@@ -101,6 +121,9 @@ main(int argc, char **argv)
 	g_io_add_watch(log_io, G_IO_IN, read_log_file, NULL);
 	log_io_active = true;
 
+	stdin_io = g_io_channel_unix_new(0);
+	g_io_add_watch(stdin_io, G_IO_IN, read_stdin, NULL);
+
 	gtk_init(&argc, &argv);
 
 	top_window = GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
@@ -110,13 +133,16 @@ main(int argc, char **argv)
 	gtk_window_set_resizable(top_window, true);
 
 	scroll = GTK_SCROLLED_WINDOW(gtk_scrolled_window_new(NULL, NULL));
-	gtk_container_add(GTK_CONTAINER(top_window), GTK_WIDGET(scroll));
 
 	text_view = GTK_TEXT_VIEW(gtk_text_view_new());
 	gtk_text_view_set_editable(text_view, FALSE);
 	text_buffer = gtk_text_view_get_buffer(text_view);
 
 	gtk_container_add(GTK_CONTAINER(scroll), GTK_WIDGET(text_view));
+
+	start_robot = GTK_LABEL(gtk_label_new("<--- Press button to start"));
+	gtk_widget_modify_font(GTK_WIDGET(start_robot), pango_font_description_from_string("sans-serif 24"));
+	gtk_container_add(GTK_CONTAINER(top_window), GTK_WIDGET(start_robot));
 
 	gtk_widget_show_all(GTK_WIDGET(top_window));
 
