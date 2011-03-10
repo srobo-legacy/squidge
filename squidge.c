@@ -72,6 +72,7 @@ read_stdin(GIOChannel *src, GIOCondition cond, gpointer data)
 		 * that the user button has been pressed. Switch view. */
 		gtk_container_remove(GTK_CONTAINER(top_window), GTK_WIDGET(start_robot));
 		gtk_container_add(GTK_CONTAINER(top_window), GTK_WIDGET(scroll));
+		gtk_widget_grab_focus(GTK_WIDGET(text_view));
 		gtk_widget_show_all(GTK_WIDGET(top_window));
 		return FALSE;
 	}
