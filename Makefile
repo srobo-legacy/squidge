@@ -7,6 +7,6 @@ squidge: squidge.c
 	$(CC) $^ -o $@ $(CFLAGS) $(LDFLAGS)
 
 clean:
-	-rm *.o squidge
+	-rm -f *.o squidge
 
 .PHONY: clean
