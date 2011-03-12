@@ -1,10 +1,10 @@
-CINCLUDES+=	`pkg-config --cflags gtk+-2.0 gdk-2.0`
-LIBS+=		`pkg-config --libs gtk+-2.0 gdk-2.0`
+CFLAGS  += `pkg-config --cflags gtk+-2.0 gdk-2.0` -ggdb3
+LDFLAGS += `pkg-config --libs gtk+-2.0 gdk-2.0`
 
 all: squidge
 
 squidge: squidge.c
-	$(CC) $^ -o $@ $(CINCLUDES) $(LIBS) -ggdb3
+	$(CC) $^ -o $@ $(CFLAGS) $(LDFLAGS)
 
 clean:
 	-rm *.o squidge
