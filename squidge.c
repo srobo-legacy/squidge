@@ -139,6 +139,9 @@ main(int argc, char **argv)
 	gtk_window_set_resizable(top_window, true);
 
 	scroll = GTK_SCROLLED_WINDOW(gtk_scrolled_window_new(NULL, NULL));
+	// Ensure we have scrollbars in both directions:
+	// Sanity check scroll != NULL?
+	gtk_scrolled_window_set_policy(scroll, GTK_POLICY_ALWAYS, GTK_POLICY_ALWAYS);
 
 	text_view = GTK_TEXT_VIEW(gtk_text_view_new());
 	gtk_text_view_set_editable(text_view, FALSE);
