@@ -16,6 +16,7 @@ GtkTextBuffer *text_buffer;
 GtkScrolledWindow *scroll;
 GtkLabel *start_robot;
 GIOChannel *log_io, *inotify_io, *stdin_io;
+gdouble prevscrollbarmaxvalue = -1.0; // to ensure that it is not initially = scrollbarvalue.
 bool log_io_active = false;
 
 void
@@ -42,6 +43,27 @@ read_log_file(GIOChannel *src, GIOCondition cond, gpointer data)
 
 	gtk_text_buffer_get_end_iter(text_buffer, &iter);
 	gtk_text_buffer_insert(text_buffer, &iter, buffer, len);
+
+	GtkAdjustment *scrollbaradjustment;
+	GtkScrollbar *vertscrollbar;
+	gdouble scrollbarvalue;
+
+	vertscrollbar = GTK_SCROLLBAR(gtk_scrolled_window_get_vscrollbar(scroll));
+	if (vertscrollbar == NULL)
+		return FALSE; // Much weirdness.
+
+	scrollbaradjustment = gtk_range_get_adjustment(GTK_RANGE(vertscrollbar));
+	if (scrollbaradjustment == NULL)
+		return FALSE; // Much weirdness II - The weirdness returns!
+
+	scrollbarvalue = gtk_adjustment_get_value(scrollbaradjustment);
+
+	if (prevscrollbarmaxvalue == scrollbarvalue)
+		text_scroll_to_bottom();
+
+	// This expression calculates the true max value, due to the size of the slider on the scroll bar itself:
+	prevscrollbarmaxvalue = gtk_adjustment_get_upper(scrollbaradjustment); // expression split for legibility.
+	prevscrollbarmaxvalue -= gtk_adjustment_get_page_size(scrollbaradjustment);
 
 	return TRUE;
 }
