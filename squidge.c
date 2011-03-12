@@ -168,7 +168,7 @@ main(int argc, char **argv)
 	g_signal_connect_swapped(G_OBJECT(top_window), "destroy",
 			G_CALLBACK(gtk_main_quit), G_OBJECT(top_window));
 	g_signal_connect(G_OBJECT(top_window), "key-press-event",
-			key_evt_handler, NULL);
+			G_CALLBACK(key_evt_handler), NULL);
 
 	gtk_window_set_focus(top_window, GTK_WIDGET(text_view));
 
