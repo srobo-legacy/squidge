@@ -18,6 +18,15 @@ GtkLabel *start_robot;
 GIOChannel *log_io, *inotify_io, *stdin_io;
 bool log_io_active = false;
 
+void
+text_scroll_to_bottom(void)
+{
+	GtkTextIter iter;
+
+	gtk_text_buffer_get_end_iter(text_buffer, &iter);
+	gtk_text_view_scroll_to_iter(text_view, &iter, 0.0, FALSE, 0, 0);
+}
+
 gboolean
 read_log_file(GIOChannel *src, GIOCondition cond, gpointer data)
 {
@@ -83,13 +92,9 @@ read_stdin(GIOChannel *src, GIOCondition cond, gpointer data)
 gboolean
 key_evt_handler(GtkWidget *wind, GdkEventKey *key, gpointer unused)
 {
-	GtkTextIter iter;
-
 	if (key->type == GDK_KEY_PRESS) {
 		if (key->keyval == GDK_Page_Up) {
-			gtk_text_buffer_get_end_iter(text_buffer, &iter);
-			gtk_text_view_scroll_to_iter(text_view, &iter, 0.0,
-							FALSE, 0, 0);
+			text_scroll_to_bottom();
 			return TRUE;
 		}
 	}
