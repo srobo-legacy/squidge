@@ -105,6 +105,9 @@ read_stdin(GIOChannel *src, GIOCondition cond, gpointer data)
 		gtk_container_add(GTK_CONTAINER(top_window), GTK_WIDGET(scroll));
 		gtk_widget_grab_focus(GTK_WIDGET(text_view));
 		gtk_widget_show_all(GTK_WIDGET(top_window));
+		/* I assume we'll want to scroll to the bottom so we get the autoscrolling,
+		 * even if text was already present - Steven */
+		text_scroll_to_bottom();
 		return FALSE;
 	}
 
