@@ -6,6 +6,10 @@ all: squidge
 squidge: squidge.c
 	$(CC) $^ -o $@ $(CFLAGS) $(LDFLAGS)
 
+install: all
+	install -d $(DESTDIR)$(PREFIX)/bin
+	install squidge $(DESTDIR)$(PREFIX)/bin/squidge
+
 clean:
 	-rm -f *.o squidge
 
