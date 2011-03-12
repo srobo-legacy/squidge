@@ -147,6 +147,12 @@ main(int argc, char **argv)
 
 	gtk_widget_show_all(GTK_WIDGET(top_window));
 
+	/* Hide the cursor by making it transparent */
+	GdkWindow* gdk_window = gtk_widget_get_window(GTK_WIDGET(top_window));
+	GdkCursor *cursor;
+	cursor = gdk_cursor_new(GDK_BLANK_CURSOR);
+	gdk_window_set_cursor(gdk_window, cursor);
+
 	GdkDisplay *display = gdk_display_get_default();
 	GdkScreen *scr = gdk_screen_get_default();
 	gdk_display_warp_pointer(display, scr, 1000, 1000);
