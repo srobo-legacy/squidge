@@ -35,7 +35,7 @@ read_log_file(GIOChannel *src, GIOCondition cond, gpointer data)
 	char buffer[1024];
 	int len;
 
-	len = read(file_fd, buffer, 1024);
+	len = read(file_fd, buffer, sizeof(buffer));
 	if (len == 0) {
 		log_io_active = false;
 		return FALSE;
