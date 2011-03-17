@@ -9,28 +9,40 @@
 
 #include <linux/inotify.h>
 
+typedef struct {
+	/* The main window */
+	GtkWindow *win;
+	/* First panel of notebook contains 'press button' label,
+	   second contains the log */
+	GtkNotebook *notebook;
+
+	GtkTextView *log_textview;
+	GtkTextBuffer *text_buffer;
+	GtkScrolledWindow *scroll;
+} squidge_ui_t;
+
+typedef struct {
+	squidge_ui_t ui;
+} squidge_t;
+
 int file_fd, inotify_fd;
-GtkWindow *top_window;
-GtkTextView *text_view;
-GtkTextBuffer *text_buffer;
-GtkScrolledWindow *scroll;
-GtkLabel *start_robot;
 GIOChannel *log_io, *inotify_io, *stdin_io;
 gdouble prevscrollbarmaxvalue = -1.0; // to ensure that it is not initially = scrollbarvalue.
 bool log_io_active = false;
 
 void
-text_scroll_to_bottom(void)
+text_scroll_to_bottom(squidge_t *squidge)
 {
 	GtkTextIter iter;
 
-	gtk_text_buffer_get_end_iter(text_buffer, &iter);
-	gtk_text_view_scroll_to_iter(text_view, &iter, 0.0, FALSE, 0, 0);
+	gtk_text_buffer_get_end_iter(squidge->ui.text_buffer, &iter);
+	gtk_text_view_scroll_to_iter(squidge->ui.log_textview, &iter, 0.0, FALSE, 0, 0);
 }
 
 gboolean
-read_log_file(GIOChannel *src, GIOCondition cond, gpointer data)
+read_log_file(GIOChannel *src, GIOCondition cond, gpointer _squidge)
 {
+	squidge_t *squidge = _squidge;
 	GtkTextIter iter;
 	char buffer[1024];
 	int len;
@@ -41,25 +53,26 @@ read_log_file(GIOChannel *src, GIOCondition cond, gpointer data)
 		return FALSE;
 	}
 
-	gtk_text_buffer_get_end_iter(text_buffer, &iter);
-	gtk_text_buffer_insert(text_buffer, &iter, buffer, len);
+	gtk_text_buffer_get_end_iter(squidge->ui.text_buffer, &iter);
+	gtk_text_buffer_insert(squidge->ui.text_buffer, &iter, buffer, len);
+
+	return TRUE;
+	/* The code below this point has bugs, which will be fixed in another commit! */
 
 	GtkAdjustment *scrollbaradjustment;
 	GtkScrollbar *vertscrollbar;
 	gdouble scrollbarvalue;
 
-	vertscrollbar = GTK_SCROLLBAR(gtk_scrolled_window_get_vscrollbar(scroll));
-	if (vertscrollbar == NULL)
-		return FALSE; // Much weirdness.
+	vertscrollbar = GTK_SCROLLBAR(gtk_scrolled_window_get_vscrollbar(squidge->ui.scroll));
+	g_assert( vertscrollbar != NULL );
 
 	scrollbaradjustment = gtk_range_get_adjustment(GTK_RANGE(vertscrollbar));
-	if (scrollbaradjustment == NULL)
-		return FALSE; // Much weirdness II - The weirdness returns!
+	g_assert( scrollbaradjustment != NULL );
 
 	scrollbarvalue = gtk_adjustment_get_value(scrollbaradjustment);
 
 	if (prevscrollbarmaxvalue == scrollbarvalue)
-		text_scroll_to_bottom();
+		text_scroll_to_bottom(squidge);
 
 	// This expression calculates the true max value, due to the size of the slider on the scroll bar itself:
 	prevscrollbarmaxvalue = gtk_adjustment_get_upper(scrollbaradjustment); // expression split for legibility.
@@ -69,7 +82,7 @@ read_log_file(GIOChannel *src, GIOCondition cond, gpointer data)
 }
 
 gboolean
-read_inotify_fd(GIOChannel *src, GIOCondition cond, gpointer data)
+read_inotify_fd(GIOChannel *src, GIOCondition cond, gpointer _squidge)
 {
 	char buffer[1024];
 	struct inotify_event evt;
@@ -84,7 +97,7 @@ read_inotify_fd(GIOChannel *src, GIOCondition cond, gpointer data)
 		read(inotify_fd, buffer, evt.len);
 
 	if (evt.mask & IN_MODIFY && !log_io_active) {
-		g_io_add_watch(log_io, G_IO_IN, read_log_file, NULL);
+		g_io_add_watch(log_io, G_IO_IN, read_log_file, _squidge);
 		log_io_active = true;
 	}
 
@@ -92,34 +105,35 @@ read_inotify_fd(GIOChannel *src, GIOCondition cond, gpointer data)
 }
 
 gboolean
-read_stdin(GIOChannel *src, GIOCondition cond, gpointer data)
+read_stdin(GIOChannel *src, GIOCondition cond, gpointer _squidge)
 {
+	squidge_t *squidge = _squidge;
 	char buffer[1024];
 	int ret;
 
 	ret = read(0, &buffer[0], sizeof(buffer));
 	if (ret != 0) {
 		/* We've been fed some input (any input) from pyenv, indicating
-		 * that the user button has been pressed. Switch view. */
-		gtk_container_remove(GTK_CONTAINER(top_window), GTK_WIDGET(start_robot));
-		gtk_container_add(GTK_CONTAINER(top_window), GTK_WIDGET(scroll));
-		gtk_widget_grab_focus(GTK_WIDGET(text_view));
-		gtk_widget_show_all(GTK_WIDGET(top_window));
-		/* I assume we'll want to scroll to the bottom so we get the autoscrolling,
-		 * even if text was already present - Steven */
-		text_scroll_to_bottom();
+		 * that the user button has been pressed. Switch to the log */
+		gtk_notebook_set_current_page( squidge->ui.notebook, 1 );
+		gtk_window_set_focus(squidge->ui.win, GTK_WIDGET(squidge->ui.log_textview));
+
+		text_scroll_to_bottom(squidge);
+
 		return FALSE;
 	}
 
 	return TRUE;
 }
 
-gboolean
-key_evt_handler(GtkWidget *wind, GdkEventKey *key, gpointer unused)
+G_MODULE_EXPORT gboolean
+key_evt_handler(GtkWidget *wind, GdkEventKey *key, gpointer _squidge)
 {
+	squidge_t *squidge;
+
 	if (key->type == GDK_KEY_PRESS) {
 		if (key->keyval == GDK_Page_Up) {
-			text_scroll_to_bottom();
+			text_scroll_to_bottom(squidge);
 			return TRUE;
 		}
 	}
@@ -127,9 +141,33 @@ key_evt_handler(GtkWidget *wind, GdkEventKey *key, gpointer unused)
 	return FALSE;
 }
 
+#define obj(t, n) do {							\
+		sq->ui. n = t(gtk_builder_get_object( builder, #n ));	\
+	} while (0)
+
+static void init_ui( squidge_t *sq )
+{
+	GtkBuilder *builder;
+
+	builder = gtk_builder_new();
+	g_assert( gtk_builder_add_from_file( builder, "squidge.gtkbuilder", NULL ) );
+
+	obj( GTK_WINDOW, win );
+	obj( GTK_NOTEBOOK, notebook );
+	obj( GTK_TEXT_VIEW, log_textview );
+
+	sq->ui.text_buffer = gtk_text_view_get_buffer(sq->ui.log_textview);
+
+	gtk_builder_connect_signals( builder, sq );
+	g_object_unref( G_OBJECT(builder) );
+	gtk_widget_show( GTK_WIDGET(sq->ui.win) );
+}
+#undef obj
+
 int
 main(int argc, char **argv)
 {
+	squidge_t squidge;
 
 	if (argc != 2) {
 		fprintf(stderr, "Usage: squidge logfile\n");
@@ -142,46 +180,24 @@ main(int argc, char **argv)
 		return 1;
 	}
 
+	gtk_init(&argc, &argv);
+	init_ui( &squidge );
+
 	inotify_fd = inotify_init();
 	inotify_add_watch(inotify_fd, argv[1], IN_MODIFY);
 
 	inotify_io = g_io_channel_unix_new(inotify_fd);
-	g_io_add_watch(inotify_io, G_IO_IN, read_inotify_fd, NULL);
+	g_io_add_watch(inotify_io, G_IO_IN, read_inotify_fd, &squidge);
 
 	log_io = g_io_channel_unix_new(file_fd);
-	g_io_add_watch(log_io, G_IO_IN, read_log_file, NULL);
+	g_io_add_watch(log_io, G_IO_IN, read_log_file, &squidge);
 	log_io_active = true;
 
 	stdin_io = g_io_channel_unix_new(0);
-	g_io_add_watch(stdin_io, G_IO_IN, read_stdin, NULL);
-
-	gtk_init(&argc, &argv);
-
-	top_window = GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
-	gtk_window_set_decorated(top_window, FALSE);
-	gtk_window_set_default_size(top_window, 480, 272);
-	gtk_container_set_border_width(GTK_CONTAINER(top_window), 0);
-	gtk_window_set_resizable(top_window, true);
-
-	scroll = GTK_SCROLLED_WINDOW(gtk_scrolled_window_new(NULL, NULL));
-	// Ensure we have scrollbars in both directions:
-	// Sanity check scroll != NULL?
-	gtk_scrolled_window_set_policy(scroll, GTK_POLICY_ALWAYS, GTK_POLICY_ALWAYS);
-
-	text_view = GTK_TEXT_VIEW(gtk_text_view_new());
-	gtk_text_view_set_editable(text_view, FALSE);
-	text_buffer = gtk_text_view_get_buffer(text_view);
-
-	gtk_container_add(GTK_CONTAINER(scroll), GTK_WIDGET(text_view));
-
-	start_robot = GTK_LABEL(gtk_label_new("<--- Press button to start"));
-	gtk_widget_modify_font(GTK_WIDGET(start_robot), pango_font_description_from_string("sans-serif 24"));
-	gtk_container_add(GTK_CONTAINER(top_window), GTK_WIDGET(start_robot));
-
-	gtk_widget_show_all(GTK_WIDGET(top_window));
+	g_io_add_watch(stdin_io, G_IO_IN, read_stdin, &squidge);
 
 	/* Hide the cursor by making it transparent */
-	GdkWindow* gdk_window = gtk_widget_get_window(GTK_WIDGET(top_window));
+	GdkWindow* gdk_window = gtk_widget_get_window(GTK_WIDGET(squidge.ui.win));
 	GdkCursor *cursor;
 	cursor = gdk_cursor_new(GDK_BLANK_CURSOR);
 	gdk_window_set_cursor(gdk_window, cursor);
@@ -189,13 +205,6 @@ main(int argc, char **argv)
 	GdkDisplay *display = gdk_display_get_default();
 	GdkScreen *scr = gdk_screen_get_default();
 	gdk_display_warp_pointer(display, scr, 1000, 1000);
-
-	g_signal_connect_swapped(G_OBJECT(top_window), "destroy",
-			G_CALLBACK(gtk_main_quit), G_OBJECT(top_window));
-	g_signal_connect(G_OBJECT(top_window), "key-press-event",
-			G_CALLBACK(key_evt_handler), NULL);
-
-	gtk_window_set_focus(top_window, GTK_WIDGET(text_view));
 
 	gtk_main();
 
