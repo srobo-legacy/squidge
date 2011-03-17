@@ -1,5 +1,6 @@
 /*#include <fcntl.h>*/
 /* including fcntl conflicts with linux/inotify. Broken headers are broken. */
+#include "squidge-gtkbuilder.h"
 #include <stdlib.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -150,7 +151,7 @@ static void init_ui( squidge_t *sq )
 	GtkBuilder *builder;
 
 	builder = gtk_builder_new();
-	g_assert( gtk_builder_add_from_file( builder, "squidge.gtkbuilder", NULL ) );
+	g_assert( gtk_builder_add_from_string( builder, squidge_gtkbuilder, -1, NULL ) );
 
 	obj( GTK_WINDOW, win );
 	obj( GTK_NOTEBOOK, notebook );
