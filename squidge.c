@@ -130,7 +130,7 @@ read_stdin(GIOChannel *src, GIOCondition cond, gpointer _squidge)
 G_MODULE_EXPORT gboolean
 key_evt_handler(GtkWidget *wind, GdkEventKey *key, gpointer _squidge)
 {
-	squidge_t *squidge;
+	squidge_t *squidge = _squidge;
 
 	if (key->type == GDK_KEY_PRESS) {
 		if (key->keyval == GDK_Page_Up) {
