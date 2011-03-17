@@ -15,14 +15,8 @@
         <property name="show_tabs">False</property>
         <property name="show_border">False</property>
         <child>
-          <object class="GtkLabel" id="label4">
+          <object class="GtkImage" id="splash">
             <property name="visible">True</property>
-            <property name="xalign">0.05000000074505806</property>
-            <property name="yalign">0.46000000834465027</property>
-            <property name="label" translatable="yes">&lt;--- Press button to start</property>
-            <attributes>
-              <attribute name="size" value="20000"/>
-            </attributes>
           </object>
         </child>
         <child type="tab">

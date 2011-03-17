@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include "squidge-gtkbuilder.h"
+#include "squidge-splash-img.h"
 #include <stdlib.h>
 #include <stdbool.h>
 #include <sys/inotify.h>
@@ -7,6 +8,7 @@
 
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
 
 typedef struct {
 	/* The main window */
@@ -14,6 +16,7 @@ typedef struct {
 	/* First panel of notebook contains 'press button' label,
 	   second contains the log */
 	GtkNotebook *notebook;
+	GtkImage *splash;
 
 	GtkTextView *log_textview;
 	GtkTextBuffer *text_buffer;
@@ -140,6 +143,22 @@ key_evt_handler(GtkWidget *wind, GdkEventKey *key, gpointer _squidge)
 	return FALSE;
 }
 
+static void load_splash( squidge_t *sq )
+{
+	GdkPixbufLoader *ldr;
+	GdkPixbuf *pxb;
+
+	ldr = gdk_pixbuf_loader_new();
+	/* Load the splash image from the baked-in splash image buffer */
+	g_assert( gdk_pixbuf_loader_write( ldr, splash_img, SPLASH_IMG_LEN, NULL ) );
+	pxb = gdk_pixbuf_loader_get_pixbuf( ldr );
+
+	gtk_image_set_from_pixbuf( sq->ui.splash, pxb );
+
+	gdk_pixbuf_loader_close(ldr, NULL);
+	g_object_unref(ldr);
+}
+
 #define obj(t, n) do {							\
 		sq->ui. n = t(gtk_builder_get_object( builder, #n ));	\
 	} while (0)
@@ -153,9 +172,11 @@ static void init_ui( squidge_t *sq )
 
 	obj( GTK_WINDOW, win );
 	obj( GTK_NOTEBOOK, notebook );
+	obj( GTK_IMAGE, splash );
 	obj( GTK_TEXT_VIEW, log_textview );
 
 	sq->ui.text_buffer = gtk_text_view_get_buffer(sq->ui.log_textview);
+	load_splash(sq);
 
 	gtk_builder_connect_signals( builder, sq );
 	g_object_unref( G_OBJECT(builder) );

@@ -1,2 +1,5 @@
 squidge
 squidge-gtkbuilder.c
+squidge-splash-img.c
+squidge-splash-img.h
+splash.png

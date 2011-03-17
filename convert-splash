@@ -1,0 +1,47 @@
+#!/usr/bin/env python
+import os, sys
+
+if len(sys.argv) != 3:
+    print "Usage: convert-splash IN OUT_PREFIX"
+    exit(1)
+
+IN, OUT = sys.argv[1:]
+
+inf = open(IN, "r")
+b = inf.read()
+inf.close()
+
+of = open( "%s.c" % OUT, "w" )
+
+LINE_LEN = 10
+
+of.write( """#include "squidge-splash-img.h"
+
+const uint8_t splash_img[] = {
+""" )
+
+for i in range(0,len(b),LINE_LEN):
+    of.write( "\t" )
+
+    for j in range(i,min(i+LINE_LEN, len(b))):
+         of.write( "0x%2.2x, " % ord(b[j]) )
+
+    of.write( "\n" )
+
+of.write( "};\n" )
+of.close()
+
+of_header = open( "%s.h" % OUT, "w" )
+of_header.write( """#ifndef __SQUIDGE_SPLASH_IMG_H
+#define __SQUIDGE_SPLASH_IMG_H
+#include <stdint.h>
+
+#define SPLASH_IMG_LEN %i
+
+extern const uint8_t splash_img[SPLASH_IMG_LEN];
+
+#endif	/* __SQUIDGE_SPLASH_IMG_H */
+""" % len(b) )
+
+of_header.close()
+
