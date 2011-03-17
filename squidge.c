@@ -1,14 +1,12 @@
-/*#include <fcntl.h>*/
-/* including fcntl conflicts with linux/inotify. Broken headers are broken. */
+#include <fcntl.h>
 #include "squidge-gtkbuilder.h"
 #include <stdlib.h>
 #include <stdbool.h>
+#include <sys/inotify.h>
 #include <unistd.h>
 
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
-
-#include <linux/inotify.h>
 
 typedef struct {
 	/* The main window */
