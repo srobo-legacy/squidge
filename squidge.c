@@ -166,6 +166,7 @@ static void load_splash( squidge_t *sq )
 static void init_ui( squidge_t *sq )
 {
 	GtkBuilder *builder;
+	PangoFontDescription *pf;
 
 	builder = gtk_builder_new();
 	g_assert( gtk_builder_add_from_string( builder, squidge_gtkbuilder, -1, NULL ) );
@@ -177,6 +178,12 @@ static void init_ui( squidge_t *sq )
 
 	sq->ui.text_buffer = gtk_text_view_get_buffer(sq->ui.log_textview);
 	load_splash(sq);
+
+	/* We want a monospace font */
+	pf = pango_font_description_from_string("Monospace 10");
+	g_assert( pf != NULL );
+	gtk_widget_modify_font( GTK_WIDGET(sq->ui.log_textview), pf );
+	pango_font_description_free( pf );
 
 	gtk_builder_connect_signals( builder, sq );
 	g_object_unref( G_OBJECT(builder) );
