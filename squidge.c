@@ -20,11 +20,14 @@ typedef struct {
 
 	GtkTextView *log_textview;
 	GtkTextBuffer *text_buffer;
-	GtkScrolledWindow *scroll;
+	GtkScrolledWindow *log_scroll;
 } squidge_ui_t;
 
 typedef struct {
 	squidge_ui_t ui;
+
+	/* Whether we're following the bottom of the log */
+	bool follow_bottom;
 } squidge_t;
 
 int file_fd, inotify_fd;
@@ -57,28 +60,6 @@ read_log_file(GIOChannel *src, GIOCondition cond, gpointer _squidge)
 
 	gtk_text_buffer_get_end_iter(squidge->ui.text_buffer, &iter);
 	gtk_text_buffer_insert(squidge->ui.text_buffer, &iter, buffer, len);
-
-	return TRUE;
-	/* The code below this point has bugs, which will be fixed in another commit! */
-
-	GtkAdjustment *scrollbaradjustment;
-	GtkScrollbar *vertscrollbar;
-	gdouble scrollbarvalue;
-
-	vertscrollbar = GTK_SCROLLBAR(gtk_scrolled_window_get_vscrollbar(squidge->ui.scroll));
-	g_assert( vertscrollbar != NULL );
-
-	scrollbaradjustment = gtk_range_get_adjustment(GTK_RANGE(vertscrollbar));
-	g_assert( scrollbaradjustment != NULL );
-
-	scrollbarvalue = gtk_adjustment_get_value(scrollbaradjustment);
-
-	if (prevscrollbarmaxvalue == scrollbarvalue)
-		text_scroll_to_bottom(squidge);
-
-	// This expression calculates the true max value, due to the size of the slider on the scroll bar itself:
-	prevscrollbarmaxvalue = gtk_adjustment_get_upper(scrollbaradjustment); // expression split for legibility.
-	prevscrollbarmaxvalue -= gtk_adjustment_get_page_size(scrollbaradjustment);
 
 	return TRUE;
 }
@@ -120,7 +101,8 @@ read_stdin(GIOChannel *src, GIOCondition cond, gpointer _squidge)
 		gtk_notebook_set_current_page( squidge->ui.notebook, 1 );
 		gtk_window_set_focus(squidge->ui.win, GTK_WIDGET(squidge->ui.log_textview));
 
-		text_scroll_to_bottom(squidge);
+		if( squidge->follow_bottom )
+			text_scroll_to_bottom(squidge);
 
 		return FALSE;
 	}
@@ -135,6 +117,8 @@ key_evt_handler(GtkWidget *wind, GdkEventKey *key, gpointer _squidge)
 
 	if (key->type == GDK_KEY_PRESS) {
 		if (key->keyval == GDK_Page_Up) {
+
+			squidge->follow_bottom = true;
 			text_scroll_to_bottom(squidge);
 			return TRUE;
 		}
@@ -159,6 +143,49 @@ static void load_splash( squidge_t *sq )
 	g_object_unref(ldr);
 }
 
+/* Returns the upper scroll value
+ * The adjustments for scrollbars in Gtk range from
+ * the adjustment's "lower" value to its "upper - page_size"
+ * value.  Ths function returns "upper - page_size" for the
+ * given adjustment. */
+static double adjustment_get_end_value( GtkAdjustment *adj )
+{
+	const gdouble upper = gtk_adjustment_get_upper(adj);
+	const gdouble page_size = gtk_adjustment_get_page_size(adj);
+
+	return upper - page_size;
+}
+
+/* Scrolled window adjustment "value-changed" signal handler
+ * Called when the adjustment's "value" field has changed.
+ * (i.e. someone's _changed_ the scroll position) */
+static void vert_value_changed( GtkAdjustment *adj,
+				gpointer _squidge )
+{
+	squidge_t *sq = _squidge;
+	const gdouble pos = gtk_adjustment_get_value(adj);
+	const gdouble end = adjustment_get_end_value(adj);
+
+	/* If we've scrolled to the end, we're following the end */
+	sq->follow_bottom = (pos == end);
+}
+
+/* Scrolled window adjustment "changed" signal handler
+ * Called when any property _other_ than the "value" field has changed.
+ * The only time this happens in this app is when additional lines
+ * are appended to the end of the log text. */
+static void vert_changed( GtkAdjustment *adj,
+			  gpointer _squidge )
+{
+	squidge_t *sq = _squidge;
+	const gdouble pos = gtk_adjustment_get_value(adj);
+	const gdouble end = adjustment_get_end_value(adj);
+
+	if( sq->follow_bottom && pos != end )
+		/* Scroll to the bottom again */
+		gtk_adjustment_set_value( adj, end );
+}
+
 #define obj(t, n) do {							\
 		sq->ui. n = t(gtk_builder_get_object( builder, #n ));	\
 	} while (0)
@@ -167,6 +194,7 @@ static void init_ui( squidge_t *sq )
 {
 	GtkBuilder *builder;
 	PangoFontDescription *pf;
+	GtkAdjustment *v;
 
 	builder = gtk_builder_new();
 	g_assert( gtk_builder_add_from_string( builder, squidge_gtkbuilder, -1, NULL ) );
@@ -175,6 +203,7 @@ static void init_ui( squidge_t *sq )
 	obj( GTK_NOTEBOOK, notebook );
 	obj( GTK_IMAGE, splash );
 	obj( GTK_TEXT_VIEW, log_textview );
+	obj( GTK_SCROLLED_WINDOW, log_scroll );
 
 	sq->ui.text_buffer = gtk_text_view_get_buffer(sq->ui.log_textview);
 	load_splash(sq);
@@ -184,6 +213,13 @@ static void init_ui( squidge_t *sq )
 	g_assert( pf != NULL );
 	gtk_widget_modify_font( GTK_WIDGET(sq->ui.log_textview), pf );
 	pango_font_description_free( pf );
+
+	/* We want the value-changed signal so we can stop following the bottom */
+	v = gtk_scrolled_window_get_vadjustment( sq->ui.log_scroll );
+	g_signal_connect( v, "value-changed",
+			  G_CALLBACK(vert_value_changed), sq );
+	g_signal_connect( v, "changed",
+			  G_CALLBACK(vert_changed), sq );
 
 	gtk_builder_connect_signals( builder, sq );
 	g_object_unref( G_OBJECT(builder) );
@@ -209,6 +245,7 @@ main(int argc, char **argv)
 
 	gtk_init(&argc, &argv);
 	init_ui( &squidge );
+	squidge.follow_bottom = true;
 
 	inotify_fd = inotify_init();
 	inotify_add_watch(inotify_fd, argv[1], IN_MODIFY);
