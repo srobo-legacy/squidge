@@ -12,6 +12,8 @@ typedef struct {
 	int fifo;
 	/* And its associated GIOChannel */
 	GIOChannel *fifo_gio;
+	/* And its stream */
+	FILE *fifo_stream;
 
 	/* The fd for our shared memory data */
 	int shm_fd;
