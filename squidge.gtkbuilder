@@ -67,6 +67,8 @@
     </child>
   </object>
   <object class="GtkWindow" id="cam_window">
+    <property name="width_request">480</property>
+    <property name="height_request">272</property>
     <child>
       <object class="GtkImage" id="cam_img">
         <property name="visible">True</property>
