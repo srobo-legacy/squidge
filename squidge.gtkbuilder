@@ -66,4 +66,12 @@
       </object>
     </child>
   </object>
+  <object class="GtkWindow" id="cam_window">
+    <child>
+      <object class="GtkImage" id="cam_img">
+        <property name="visible">True</property>
+        <property name="stock">gtk-missing-image</property>
+      </object>
+    </child>
+  </object>
 </interface>

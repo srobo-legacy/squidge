@@ -1,4 +1,6 @@
+#include "camview.h"
 #include <fcntl.h>
+#include "squidge.h"
 #include "squidge-gtkbuilder.h"
 #include "squidge-splash-img.h"
 #include <stdlib.h>
@@ -9,26 +11,6 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkkeysyms.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
-
-typedef struct {
-	/* The main window */
-	GtkWindow *win;
-	/* First panel of notebook contains 'press button' label,
-	   second contains the log */
-	GtkNotebook *notebook;
-	GtkImage *splash;
-
-	GtkTextView *log_textview;
-	GtkTextBuffer *text_buffer;
-	GtkScrolledWindow *log_scroll;
-} squidge_ui_t;
-
-typedef struct {
-	squidge_ui_t ui;
-
-	/* Whether we're following the bottom of the log */
-	bool follow_bottom;
-} squidge_t;
 
 int file_fd, inotify_fd;
 GIOChannel *log_io, *inotify_io, *stdin_io;
@@ -207,6 +189,7 @@ static void init_ui( squidge_t *sq )
 
 	sq->ui.text_buffer = gtk_text_view_get_buffer(sq->ui.log_textview);
 	load_splash(sq);
+	camview_init( &sq->camview, builder );
 
 	/* We want a monospace font */
 	pf = pango_font_description_from_string("Monospace 10");

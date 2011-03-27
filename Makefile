@@ -4,7 +4,7 @@ LDFLAGS += `pkg-config --libs $(PKGS)`
 
 all: squidge
 
-squidge: squidge.c squidge-gtkbuilder.c squidge-splash-img.c
+squidge: squidge.c squidge-gtkbuilder.c squidge-splash-img.c camview.c
 	$(CC) $^ -o $@ $(CFLAGS) $(LDFLAGS)
 
 squidge-gtkbuilder.c: squidge.gtkbuilder convert-gtkbuild
