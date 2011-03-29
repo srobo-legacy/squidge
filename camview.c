@@ -140,24 +140,18 @@ static gboolean open_hueblobs( gpointer _cam )
 			      IMG_SIZE + 1, PROT_READ | PROT_WRITE, MAP_SHARED,
 			      cam->shm_fd, 0 );
 
-	if( cam->img_data == NULL ) {
+	if( cam->img_data == NULL )
 		/* mmap failed */
-		g_debug( "Failed to mmap robovis's shared memory" );
 		goto error1;
-	}
 
 	/* Open the fifo */
 	cam->fifo = open( "/tmp/robovis_frame_fifo", O_RDONLY | O_NONBLOCK );
-	if( cam->fifo == -1 ) {
-		g_debug( "Opening robovis fifo failed" );
+	if( cam->fifo == -1 )
 		goto error2;
-	}
 
 	cam->fifo_stream = fdopen( cam->fifo, "r" );
-	if( cam->fifo_stream == NULL ) {
-		g_debug( "Error fdopening robovis fifo" );
+	if( cam->fifo_stream == NULL )
 		goto error3;
-	}
 
 	/* Wait for stuff to happen on the fifo */
 	cam->fifo_gio = g_io_channel_unix_new( cam->fifo );
