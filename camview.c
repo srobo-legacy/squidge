@@ -159,6 +159,7 @@ static gboolean open_hueblobs( gpointer _cam )
 	g_io_add_watch( cam->fifo_gio, G_IO_ERR, fifo_err, cam );
 
 	/* Camera was successfully opened, no need to call again */
+	g_debug( "Successfully connected to hueblobs fifo" );
 	return FALSE;
 
 error3:
