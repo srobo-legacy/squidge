@@ -126,16 +126,14 @@ static gboolean fifo_err( GIOChannel *src, GIOCondition cond, gpointer _camview 
 }
 
 /* Load the shared memory */
-static void open_hueblobs( camview_t *cam )
+static gboolean open_hueblobs( gpointer _cam )
 {
+	camview_t *cam = _cam;
 	cam->shm_fd = shm_open( "/robovis_frame", O_RDWR, 0 );
 
-	if( cam->shm_fd < 0 ) {
-		/* The webcam might not be present etc. */
-		cam->img_data = NULL;
-		g_debug( "Robovis not found" );
-		return;
-	}
+	if( cam->shm_fd < 0 )
+		/* FIFO not present right now */
+		goto error0;
 
 	/* mmap the shared memory, including the flag byte */
 	cam->img_data = mmap( NULL,
@@ -145,36 +143,42 @@ static void open_hueblobs( camview_t *cam )
 	if( cam->img_data == NULL ) {
 		/* mmap failed */
 		g_debug( "Failed to mmap robovis's shared memory" );
-		goto error0;
+		goto error1;
 	}
 
 	/* Open the fifo */
 	cam->fifo = open( "/tmp/robovis_frame_fifo", O_RDONLY | O_NONBLOCK );
 	if( cam->fifo == -1 ) {
 		g_debug( "Opening robovis fifo failed" );
-		goto error1;
+		goto error2;
 	}
 
 	cam->fifo_stream = fdopen( cam->fifo, "r" );
 	if( cam->fifo_stream == NULL ) {
 		g_debug( "Error fdopening robovis fifo" );
-		goto error2;
+		goto error3;
 	}
 
 	/* Wait for stuff to happen on the fifo */
 	cam->fifo_gio = g_io_channel_unix_new( cam->fifo );
 	g_io_add_watch( cam->fifo_gio, G_IO_IN, fifo_data_ready, cam );
 	g_io_add_watch( cam->fifo_gio, G_IO_ERR, fifo_err, cam );
-	return;
-error2:
+
+	/* Camera was successfully opened, no need to call again */
+	return FALSE;
+
+error3:
 	close(cam->fifo);
-	cam->fifo = -1;
-error1:
+error2:
 	munmap( cam->img_data, IMG_SIZE + 1 );
-	cam->img_data = NULL;
-error0:
+error1:
 	close( cam->shm_fd );
+error0:
+	cam->fifo = -1;
+	cam->img_data = NULL;
 	cam->shm_fd = -1;
+
+	return TRUE;
 }
 
 #define obj(t, n) do {							\
@@ -188,7 +192,9 @@ void camview_init( camview_t *cam, GtkBuilder *builder )
 
 	gtk_widget_show( GTK_WIDGET(cam->cam_window) );
 
-	open_hueblobs(cam);
+	if( open_hueblobs(cam) )
+		/* Failed to open the connection to hueblobs, try again in 500ms */
+		g_timeout_add( 500, open_hueblobs, cam );
 }
 
 #undef obj
