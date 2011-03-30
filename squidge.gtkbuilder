@@ -5,6 +5,7 @@
   <object class="GtkWindow" id="win">
     <property name="width_request">480</property>
     <property name="height_request">272</property>
+    <property name="title" translatable="yes">Log Viewer</property>
     <property name="decorated">False</property>
     <signal name="destroy" handler="gtk_main_quit"/>
     <signal name="key_press_event" handler="key_evt_handler"/>
@@ -69,6 +70,7 @@
   <object class="GtkWindow" id="cam_window">
     <property name="width_request">480</property>
     <property name="height_request">272</property>
+    <property name="title" translatable="yes">Camera View</property>
     <child>
       <object class="GtkNotebook" id="cam_notebook">
         <property name="width_request">320</property>
