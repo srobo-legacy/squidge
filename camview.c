@@ -1,8 +1,11 @@
+#define _GNU_SOURCE
 #include "camview.h"
 #include <fcntl.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <glib.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -31,16 +34,23 @@ static gboolean read_blob( camview_t *cam, blob_t* b )
 {
 	uint8_t buf[256];
 
-	if( fgets( (char*)buf, 256, cam->fifo_stream ) == NULL )
-		return FALSE;
+	while(1) {
+		if( fgets( (char*)buf, 256, cam->fifo_stream ) == NULL )
+			return FALSE;
 
-	int r = sscanf( (const char*)buf, "%hu,%hu,%hu,%hu,%u,%hhu\n",
-			&b->x, &b->y, &b->width, &b->height,
-			&b->mass, &b->colour );
-	if( r != 6 )
-		/* End of data */
-		return FALSE;
-	return TRUE;
+		if( strcmp( (const char*)buf, "BLOBS" ) == 0 )
+			/* End of blobs */
+			return FALSE;
+
+		int r = sscanf( (const char*)buf, "%hu,%hu,%hu,%hu,%u,%hhu\n",
+				&b->x, &b->y, &b->width, &b->height,
+				&b->mass, &b->colour );
+		if( r != 6 )
+			/* Skip this line */
+			continue;
+
+		return TRUE;
+	}
 }
 
 const uint8_t B_RED[3] = {0xff, 0, 0};
@@ -78,6 +88,8 @@ static gboolean fifo_data_ready( GIOChannel *src, GIOCondition cond, gpointer _c
 	uint8_t b;
 	GdkPixbuf *pbuf;
 	blob_t blob;
+	uint16_t col_counts[4] = {0,0,0,0};
+	char *l = NULL;
 
 	if( read(cam->fifo, &b, 1) != 1 ) {
 		g_debug( "Horror, no bytes were available" );
@@ -87,6 +99,9 @@ static gboolean fifo_data_ready( GIOChannel *src, GIOCondition cond, gpointer _c
 	/* Read the blobs out and render them on-top */
 	while( read_blob( cam, &blob ) ) {
 		const uint8_t* col;
+
+		if( blob.colour == 0 || blob.colour > GREEN )
+			continue;
 
 		switch( blob.colour ) {
 		case RED:
@@ -98,9 +113,9 @@ static gboolean fifo_data_ready( GIOChannel *src, GIOCondition cond, gpointer _c
 		case GREEN:
 			col = B_GREEN;
 			break;
-		default:
-			continue;
 		}
+
+		col_counts[blob.colour]++;
 
 		horiz_line( cam->img_data, blob.x, blob.y, blob.width, col );
 		horiz_line( cam->img_data, blob.x, blob.y+blob.height, blob.width, col );
@@ -116,6 +131,17 @@ static gboolean fifo_data_ready( GIOChannel *src, GIOCondition cond, gpointer _c
 					 NULL, NULL );
 	gtk_image_set_from_pixbuf( cam->cam_img, pbuf );
 	g_object_unref( pbuf );
+
+	/* Set the label */
+	g_assert( asprintf( &l,
+			    "<b>Red:</b> %hu\n"
+			    "<b>Green:</b> %hu\n"
+			    "<b>Blue:</b> %hu\n",
+			    col_counts[RED],
+			    col_counts[GREEN],
+			    col_counts[BLUE] ) != -1 );
+	gtk_label_set_label( cam->cam_label, l );
+	free(l);
 
 	/* Now that there's a frame visible, switch away from the tab
 	   stating that a frame will appear when one is requested. */
