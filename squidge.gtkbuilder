@@ -84,8 +84,9 @@
                 <property name="visible">True</property>
                 <property name="label" translatable="yes">Waiting for first frame from camera.
 
-Frames are only collected when your robot's code
-requests a frame from the vision system.
+Frames are only collected when your
+robot's code requests a frame from
+the vision system.
 
 When it arrives, it will be shown here.</property>
               </object>
