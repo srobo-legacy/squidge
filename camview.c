@@ -24,6 +24,8 @@ typedef struct {
 	uint32_t mass;
 } blob_t;
 
+static gboolean open_hueblobs( gpointer _cam );
+
 /* Read a blob from the blob list */
 static gboolean read_blob( camview_t *cam, blob_t* b )
 {
@@ -123,9 +125,51 @@ static gboolean fifo_data_ready( GIOChannel *src, GIOCondition cond, gpointer _c
 	return TRUE;
 }
 
+/* Close the fifo up, and wait for it to start again */
+static void close_fifo( camview_t *cam )
+{
+	uint8_t i;
+
+	for( i=0; i<3; i++ )
+		g_source_remove( cam->fifo_sources[i] );
+
+	g_io_channel_shutdown( cam->fifo_gio, FALSE, NULL );
+	cam->fifo_gio = NULL;
+
+	close(cam->fifo);
+	cam->fifo = -1;
+
+	/*** Close up shop on the shared memory too ***/
+
+	/* Stop the GtkImage using our memory */
+	/* But first, switch to the label tab */
+	gtk_notebook_set_current_page( cam->cam_notebook, 0 );
+	gtk_image_clear( cam->cam_img );
+
+	munmap( cam->img_data, IMG_SIZE + 1 );
+	close( cam->shm_fd );
+
+	cam->fifo = -1;
+	cam->img_data = NULL;
+	cam->shm_fd = -1;
+
+	/* Start trying again for hueblobs */
+	g_timeout_add( 500, open_hueblobs, cam );
+}
+
 static gboolean fifo_err( GIOChannel *src, GIOCondition cond, gpointer _camview )
 {
-	g_debug( "ERR" );
+	camview_t *cam = _camview;
+	g_debug( "error on hueblobs fifo -- closing connection to it." );
+	close_fifo(cam);
+	return FALSE;
+}
+
+static gboolean fifo_hup( GIOChannel *src, GIOCondition cond, gpointer _camview )
+{
+	camview_t *cam = _camview;
+	g_debug( "hueblobs fifo HUP'ed" );
+	close_fifo(cam);
 	return FALSE;
 }
 
@@ -159,8 +203,9 @@ static gboolean open_hueblobs( gpointer _cam )
 
 	/* Wait for stuff to happen on the fifo */
 	cam->fifo_gio = g_io_channel_unix_new( cam->fifo );
-	g_io_add_watch( cam->fifo_gio, G_IO_IN, fifo_data_ready, cam );
-	g_io_add_watch( cam->fifo_gio, G_IO_ERR, fifo_err, cam );
+	cam->fifo_sources[0] = g_io_add_watch( cam->fifo_gio, G_IO_IN, fifo_data_ready, cam );
+	cam->fifo_sources[1] = g_io_add_watch( cam->fifo_gio, G_IO_ERR, fifo_err, cam );
+	cam->fifo_sources[2] = g_io_add_watch( cam->fifo_gio, G_IO_HUP, fifo_hup, cam );
 
 	/* Camera was successfully opened, no need to call again */
 	g_debug( "Successfully connected to hueblobs fifo" );

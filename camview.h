@@ -14,6 +14,7 @@ typedef struct {
 	int fifo;
 	/* And its associated GIOChannel */
 	GIOChannel *fifo_gio;
+	guint fifo_sources[3];
 	/* And its stream */
 	FILE *fifo_stream;
 
