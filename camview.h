@@ -6,7 +6,9 @@
 typedef struct {
 	/* The bits of the GUI that the camview stuff needs */
 	GtkWindow *cam_window;
+	GtkNotebook *cam_notebook;
 	GtkImage *cam_img;
+	GtkLabel *cam_label;
 
 	/* The fifo we receive blobs from */
 	int fifo;

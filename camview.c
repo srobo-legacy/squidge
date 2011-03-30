@@ -115,6 +115,10 @@ static gboolean fifo_data_ready( GIOChannel *src, GIOCondition cond, gpointer _c
 	gtk_image_set_from_pixbuf( cam->cam_img, pbuf );
 	g_object_unref( pbuf );
 
+	/* Now that there's a frame visible, switch away from the tab
+	   stating that a frame will appear when one is requested. */
+	gtk_notebook_set_current_page( cam->cam_notebook, 1 );
+
 	cam->img_data[FLAG_POS] = 0;
 	return TRUE;
 }
@@ -183,6 +187,8 @@ error0:
 void camview_init( camview_t *cam, GtkBuilder *builder )
 {
 	obj( GTK_IMAGE, cam_img );
+	obj( GTK_NOTEBOOK, cam_notebook );
+	obj( GTK_LABEL, cam_label );
 	obj( GTK_WINDOW, cam_window );
 
 	gtk_widget_show( GTK_WIDGET(cam->cam_window) );
