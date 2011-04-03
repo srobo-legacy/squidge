@@ -198,6 +198,7 @@ static gboolean fifo_hup( GIOChannel *src, GIOCondition cond, gpointer _camview 
 static gboolean open_hueblobs( gpointer _cam )
 {
 	camview_t *cam = _cam;
+	int r;
 	cam->shm_fd = shm_open( "/robovis_frame", O_RDWR, 0 );
 
 	if( cam->shm_fd < 0 )
@@ -217,6 +218,10 @@ static gboolean open_hueblobs( gpointer _cam )
 	cam->fifo = open( "/tmp/robovis_frame_fifo", O_RDONLY | O_NONBLOCK );
 	if( cam->fifo == -1 )
 		goto error2;
+
+	/* Switch to blocking */
+	r = fcntl( cam->fifo, F_GETFD );
+	g_assert( fcntl( cam->fifo, F_SETFD, r &= ~O_NONBLOCK ) == 0 );
 
 	cam->fifo_stream = fdopen( cam->fifo, "r" );
 	if( cam->fifo_stream == NULL )
