@@ -85,7 +85,6 @@ static void vert_line( uint8_t* buf, uint16_t x, uint16_t y, uint16_t len, const
 static gboolean fifo_data_ready( GIOChannel *src, GIOCondition cond, gpointer _camview )
 {
 	camview_t *cam = _camview;
-	uint8_t b;
 	GdkPixbuf *pbuf;
 	blob_t blob;
 	uint16_t col_counts[4] = {0,0,0,0};
