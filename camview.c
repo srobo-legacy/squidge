@@ -91,11 +91,6 @@ static gboolean fifo_data_ready( GIOChannel *src, GIOCondition cond, gpointer _c
 	uint16_t col_counts[4] = {0,0,0,0};
 	char *l = NULL;
 
-	if( read(cam->fifo, &b, 1) != 1 ) {
-		g_debug( "Horror, no bytes were available" );
-		return FALSE;
-	}
-
 	/* Read the blobs out and render them on-top */
 	while( read_blob( cam, &blob ) ) {
 		const uint8_t* col;
