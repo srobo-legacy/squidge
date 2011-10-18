@@ -261,7 +261,8 @@ void camview_init( camview_t *cam, GtkBuilder *builder )
 	obj( GTK_LABEL, cam_label );
 	obj( GTK_WINDOW, cam_window );
 
-	gtk_widget_show( GTK_WIDGET(cam->cam_window) );
+	/* Disable the viewer -- currently unsupported */
+	/* gtk_widget_show( GTK_WIDGET(cam->cam_window) ); */
 
 	if( open_hueblobs(cam) )
 		/* Failed to open the connection to hueblobs, try again in 500ms */
