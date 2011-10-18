@@ -1,5 +1,5 @@
 PKGS := "gtk+-2.0 gdk-2.0 gmodule-2.0 gdk-pixbuf-2.0"
-CFLAGS  += `pkg-config --cflags $(PKGS)` -ggdb3 -Wall
+CFLAGS  += `pkg-config --cflags $(PKGS)` -ggdb3 -Wall -O3
 LDFLAGS += `pkg-config --libs $(PKGS)`
 
 all: squidge
