@@ -11,6 +11,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#define IMG_X 320
+#define IMG_Y 240
+#define IMG_SIZE (IMG_X * IMG_Y * 3)
+
 #define RED 1
 #define BLUE 2
 #define GREEN 3
@@ -77,20 +81,6 @@ static void vert_line( uint8_t* buf, uint16_t x, uint16_t y, uint16_t len, const
 	}
 }
 
-/* Swap the Red and Blue channels of in, placing the result in out.
- * Assumes the buffer is IMG_X*IMG_Y*3 long. */
-static void flip_channel_order(uint8_t *in, uint8_t *out) {
-	int i, j, k;
-	for (j=0; j<IMG_Y; j++) {
-		for (i=0; i<IMG_X; i++) {
-			k = ((j*IMG_X)+i)*3;
-			out[k + 0] = in[k + 2];
-			out[k + 1] = in[k + 1];
-			out[k + 2] = in[k + 0];
-		}
-	}
-}
-
 /* Callback for when data is available for reading from the fifo */
 static gboolean fifo_data_ready( GIOChannel *src, GIOCondition cond, gpointer _camview )
 {
@@ -128,9 +118,7 @@ static gboolean fifo_data_ready( GIOChannel *src, GIOCondition cond, gpointer _c
 		vert_line( cam->img_data, blob.x+blob.width, blob.y, blob.height, col );
 	}	
 
-	flip_channel_order(cam->img_data, cam->flipped_img_data);
-
-	pbuf = gdk_pixbuf_new_from_data( cam->flipped_img_data, GDK_COLORSPACE_RGB,
+	pbuf = gdk_pixbuf_new_from_data( cam->img_data, GDK_COLORSPACE_RGB,
 					 /* No alpha channel */
 					 FALSE,
 					 8, IMG_X, IMG_Y, IMG_X * 3,
@@ -274,7 +262,7 @@ void camview_init( camview_t *cam, GtkBuilder *builder )
 	obj( GTK_WINDOW, cam_window );
 
 	/* Disable the viewer -- currently unsupported */
-	gtk_widget_show( GTK_WIDGET(cam->cam_window) );
+	/* gtk_widget_show( GTK_WIDGET(cam->cam_window) ); */
 
 	if( open_hueblobs(cam) )
 		/* Failed to open the connection to hueblobs, try again in 500ms */
