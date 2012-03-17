@@ -12,9 +12,9 @@
 #include <gdk/gdkkeysyms.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
-int file_fd, inotify_fd;
-GIOChannel *log_io, *inotify_io, *stdin_io;
-bool log_io_active = false;
+static int file_fd, inotify_fd;
+static GIOChannel *log_io, *inotify_io, *stdin_io;
+static bool log_io_active = false;
 
 void
 text_scroll_to_bottom(squidge_t *squidge)
