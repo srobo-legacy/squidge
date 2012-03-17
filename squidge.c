@@ -14,7 +14,6 @@
 
 int file_fd, inotify_fd;
 GIOChannel *log_io, *inotify_io, *stdin_io;
-gdouble prevscrollbarmaxvalue = -1.0; // to ensure that it is not initially = scrollbarvalue.
 bool log_io_active = false;
 
 void
