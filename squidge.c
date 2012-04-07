@@ -133,8 +133,10 @@ static gboolean win_expose( GtkWidget *widget,
 {
 	squidge_t *sq = _sq;
 	GdkWindow *gw;
+	GtkWidget *page;
 
-	gw = gtk_widget_get_window( GTK_WIDGET(sq->ui.win) );
+	page = gtk_notebook_get_nth_page( sq->ui.notebook, 0 );
+	gw = gtk_widget_get_window( page );
 
 	gdk_draw_pixbuf( GDK_DRAWABLE( gw ),
 			 NULL,
@@ -199,6 +201,7 @@ static void init_ui( squidge_t *sq )
 	GtkBuilder *builder;
 	PangoFontDescription *pf;
 	GtkAdjustment *v;
+	GtkWidget *page;
 
 	builder = gtk_builder_new();
 	g_assert( gtk_builder_add_from_string( builder, squidge_gtkbuilder, -1, NULL ) );
@@ -211,7 +214,10 @@ static void init_ui( squidge_t *sq )
 	sq->ui.text_buffer = gtk_text_view_get_buffer(sq->ui.log_textview);
 
 	load_splash(sq);
-	g_signal_connect( sq->ui.win, "expose-event",
+
+	/* Draw the splash on the first page of the notebook */
+	page = gtk_notebook_get_nth_page( sq->ui.notebook, 0 );
+	g_signal_connect( page, "expose-event",
 			  G_CALLBACK( win_expose ), sq );
 
 	camview_init( &sq->camview, builder );
