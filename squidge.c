@@ -14,6 +14,12 @@
 #include <gdk/gdkkeysyms.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
+/* GDK key constants changed name in Sept 2010 */
+#ifndef GDK_KEY_Right
+#define GDK_KEY_Right GDK_Right
+#define GDK_KEY_Left GDK_Left
+#endif
+
 static int file_fd, inotify_fd;
 static GIOChannel *log_io, *inotify_io, *stdin_io;
 static bool log_io_active = false;
@@ -117,20 +123,76 @@ static void match_settings_update( squidge_t *sq )
 	free(s);
 }
 
-G_MODULE_EXPORT gboolean
-key_evt_handler(GtkWidget *wind, GdkEventKey *key, gpointer _squidge)
+static gboolean log_key_evt_handler(GtkWidget *wind, GdkEventKey *key, gpointer _squidge)
 {
 	squidge_t *squidge = _squidge;
 
 	if (key->type == GDK_KEY_PRESS) {
 		if (key->keyval == GDK_Page_Up) {
-
 			squidge->follow_bottom = true;
 			text_scroll_to_bottom(squidge);
 			return TRUE;
 		}
 	}
 
+	return FALSE;
+}
+
+static gboolean splash_key_evt_handler(GtkWidget *wind, GdkEventKey *key, gpointer _squidge)
+{
+	squidge_t *sq = _squidge;
+
+	if (key->type == GDK_KEY_PRESS) {
+		bool update = false;
+
+		switch( key->keyval ) {
+
+		case GDK_KEY_Right:
+			/* Zone Up: Left rotary CW */
+			if( sq->zone < 3 )
+				sq->zone++;
+			update = true;
+			break;
+
+		case GDK_KEY_Left:
+			/* Zone Down: Left rotary CCW */
+			if( sq->zone > 0 )
+				sq->zone--;
+			update = true;
+			break;
+
+		case GDK_Page_Down:
+		case GDK_Page_Up:
+			/* Both these buttons toggle comp/dev mode */
+			sq->comp_mode ^= 1;
+			update = true;
+			break;
+		}
+
+		if( update ) {
+			/* Propagate the changes through to the interface */
+			match_settings_update( sq );
+			return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+G_MODULE_EXPORT gboolean key_evt_handler(GtkWidget *wind, GdkEventKey *key, gpointer _squidge)
+{
+	squidge_t *sq = _squidge;
+	gint page;
+
+	page = gtk_notebook_get_current_page( sq->ui.notebook );
+
+	/* Different handler for each page */
+	switch( page ) {
+	case 0:
+		return splash_key_evt_handler( wind, key, _squidge );
+	case 1:
+		return log_key_evt_handler( wind, key, _squidge );
+	}
 	return FALSE;
 }
 
