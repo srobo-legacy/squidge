@@ -7,10 +7,11 @@
 typedef struct {
 	/* The main window */
 	GtkWindow *win;
+	GdkPixbuf *splash_pxb;
+
 	/* First panel of notebook contains 'press button' label,
 	   second contains the log */
 	GtkNotebook *notebook;
-	GtkImage *splash;
 
 	GtkTextView *log_textview;
 	GtkTextBuffer *text_buffer;

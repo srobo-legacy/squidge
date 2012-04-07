@@ -111,17 +111,40 @@ key_evt_handler(GtkWidget *wind, GdkEventKey *key, gpointer _squidge)
 static void load_splash( squidge_t *sq )
 {
 	GdkPixbufLoader *ldr;
-	GdkPixbuf *pxb;
 
 	ldr = gdk_pixbuf_loader_new();
 	/* Load the splash image from the baked-in splash image buffer */
 	g_assert( gdk_pixbuf_loader_write( ldr, splash_img, SPLASH_IMG_LEN, NULL ) );
-	pxb = gdk_pixbuf_loader_get_pixbuf( ldr );
 
-	gtk_image_set_from_pixbuf( sq->ui.splash, pxb );
+	sq->ui.splash_pxb = gdk_pixbuf_loader_get_pixbuf( ldr );
+	g_assert( sq->ui.splash_pxb != NULL );
+
+	/* We want to keep this pixbuf around! */
+	g_object_ref( sq->ui.splash_pxb );
 
 	gdk_pixbuf_loader_close(ldr, NULL);
 	g_object_unref(ldr);
+}
+
+/* Draw the splash screen on the back of the window */
+static gboolean win_expose( GtkWidget *widget,
+			    GdkEvent *ev,
+			    gpointer _sq )
+{
+	squidge_t *sq = _sq;
+	GdkWindow *gw;
+
+	gw = gtk_widget_get_window( GTK_WIDGET(sq->ui.win) );
+
+	gdk_draw_pixbuf( GDK_DRAWABLE( gw ),
+			 NULL,
+			 sq->ui.splash_pxb,
+			 0, 0, 0, 0,
+			 -1, -1,
+			 GDK_RGB_DITHER_NORMAL,
+			 0, 0 );
+
+	return TRUE;
 }
 
 /* Returns the upper scroll value
@@ -182,12 +205,15 @@ static void init_ui( squidge_t *sq )
 
 	obj( GTK_WINDOW, win );
 	obj( GTK_NOTEBOOK, notebook );
-	obj( GTK_IMAGE, splash );
 	obj( GTK_TEXT_VIEW, log_textview );
 	obj( GTK_SCROLLED_WINDOW, log_scroll );
 
 	sq->ui.text_buffer = gtk_text_view_get_buffer(sq->ui.log_textview);
+
 	load_splash(sq);
+	g_signal_connect( sq->ui.win, "expose-event",
+			  G_CALLBACK( win_expose ), sq );
+
 	camview_init( &sq->camview, builder );
 
 	/* We want a monospace font */
