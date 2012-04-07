@@ -1,8 +1,10 @@
+#define _GNU_SOURCE
 #include "camview.h"
 #include <fcntl.h>
 #include "squidge.h"
 #include "squidge-gtkbuilder.h"
 #include "squidge-splash-img.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <sys/inotify.h>
@@ -89,6 +91,30 @@ read_stdin(GIOChannel *src, GIOCondition cond, gpointer _squidge)
 	}
 
 	return TRUE;
+}
+
+/* Synchronise the display with the contents of *sq */
+static void match_settings_update( squidge_t *sq )
+{
+	char *s;
+	const char *ms;
+
+	g_assert( asprintf( &s,
+			    "<span color=\"white\" size=\"large\" font_weight=\"bold\">Zone: %hhu</span>",
+			    sq->zone ) != -1 );
+	gtk_label_set_markup( sq->ui.label_zone, s );
+	free(s);
+
+	if( sq->comp_mode )
+		ms = "Competition Mode";
+	else
+		ms = "Development Mode";
+
+	g_assert( asprintf( &s,
+			    "<span color=\"white\" size=\"large\" font_weight=\"bold\">%s</span>",
+			    ms ) != -1 );
+	gtk_label_set_markup( sq->ui.label_mode, s );
+	free(s);
 }
 
 G_MODULE_EXPORT gboolean
@@ -208,6 +234,8 @@ static void init_ui( squidge_t *sq )
 
 	obj( GTK_WINDOW, win );
 	obj( GTK_NOTEBOOK, notebook );
+	obj( GTK_LABEL, label_zone );
+	obj( GTK_LABEL, label_mode );
 	obj( GTK_TEXT_VIEW, log_textview );
 	obj( GTK_SCROLLED_WINDOW, log_scroll );
 
@@ -219,6 +247,8 @@ static void init_ui( squidge_t *sq )
 	page = gtk_notebook_get_nth_page( sq->ui.notebook, 0 );
 	g_signal_connect( page, "expose-event",
 			  G_CALLBACK( win_expose ), sq );
+
+	match_settings_update( sq );
 
 	camview_init( &sq->camview, builder );
 
@@ -258,6 +288,12 @@ main(int argc, char **argv)
 	}
 
 	gtk_init(&argc, &argv);
+
+	/* Default to zone 0 */
+	squidge.zone = 0;
+	/* and development mode */
+	squidge.comp_mode = false;
+
 	init_ui( &squidge );
 	squidge.follow_bottom = true;
 
