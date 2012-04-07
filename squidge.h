@@ -38,6 +38,8 @@ typedef struct {
 	/* Whether we're in competition mode */
 	bool comp_mode;
 
+	/* The filename to write match info to */
+	const char* mode_fname;
 } squidge_t;
 
 #endif /* __SQUIDGE_H */

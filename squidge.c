@@ -76,6 +76,38 @@ read_inotify_fd(GIOChannel *src, GIOCondition cond, gpointer _squidge)
 	return TRUE;
 }
 
+/* Write the match information to the mode file */
+static void match_info_write( squidge_t *sq )
+{
+	char *tmp;
+	FILE *f;
+
+	/* Write the match info to a temporary file first,
+	   then move the file into place.  This avoids the client
+	   reading it when it is half complete. */
+
+	g_assert( asprintf( &tmp, "%s.tmp", sq->mode_fname ) != -1 );
+
+	f = fopen( tmp, "w" );
+	g_assert( f != NULL );
+
+	fprintf( f, "{\n"
+		 "\"mode\":" );
+
+	if( sq->comp_mode )
+		fprintf( f, "\"comp\",\n" );
+	else
+		fprintf( f, "\"dev\",\n" );
+
+	fprintf( f, "\"zone\": %hhu\n", sq->zone );
+	fprintf( f, "}\n" );
+
+	fclose(f);
+
+	g_assert( rename( tmp, sq->mode_fname ) == 0 );
+	free( tmp );
+}
+
 gboolean
 read_stdin(GIOChannel *src, GIOCondition cond, gpointer _squidge)
 {
@@ -86,7 +118,12 @@ read_stdin(GIOChannel *src, GIOCondition cond, gpointer _squidge)
 	ret = read(0, &buffer[0], sizeof(buffer));
 	if (ret != 0) {
 		/* We've been fed some input (any input) from pyenv, indicating
-		 * that the user button has been pressed. Switch to the log */
+		 * that the user button has been pressed. */
+
+		/* Output the match information */
+		match_info_write( squidge );
+
+		/* Switch to the log */
 		gtk_notebook_set_current_page( squidge->ui.notebook, 1 );
 		gtk_window_set_focus(squidge->ui.win, GTK_WIDGET(squidge->ui.log_textview));
 
@@ -338,8 +375,10 @@ main(int argc, char **argv)
 {
 	squidge_t squidge;
 
-	if (argc != 2) {
-		fprintf(stderr, "Usage: squidge logfile\n");
+	if (argc != 3) {
+		fprintf(stderr, "Usage: squidge LOGFILE MODEFILE\n"
+			" - LOGFILE: The logfile to display.\n"
+			" - MODEFILE: The file to output JSON-formatted match mode data to.\n" );
 		return 1;
 	}
 
@@ -348,6 +387,7 @@ main(int argc, char **argv)
 		perror("Couldn't open log file");
 		return 1;
 	}
+	squidge.mode_fname = argv[2];
 
 	gtk_init(&argc, &argv);
 
