@@ -146,7 +146,7 @@ static gboolean win_expose( GtkWidget *widget,
 			 GDK_RGB_DITHER_NORMAL,
 			 0, 0 );
 
-	return TRUE;
+	return FALSE;
 }
 
 /* Returns the upper scroll value
