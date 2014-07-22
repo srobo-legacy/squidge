@@ -13,15 +13,12 @@ squidge-gtkbuilder.c: squidge.gtkbuilder convert-gtkbuild
 squidge-splash-img.c: splash.png convert-splash
 	./convert-splash $< squidge-splash-img
 
-splash.png: splash.svg
-	inkscape -e splash.png splash.svg
-
 install: all
 	install -d $(DESTDIR)$(PREFIX)/bin
 	install squidge $(DESTDIR)$(PREFIX)/bin/squidge
 
 clean:
 	-rm -f *.o squidge squidge-gtkbuilder.c
-	-rm -f squidge-splash-img.[hc] splash.png
+	-rm -f squidge-splash-img.[hc]
 
 .PHONY: clean
